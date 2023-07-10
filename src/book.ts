@@ -1,6 +1,6 @@
-type Book = {
-    name : String;
-    ISBN : Number;
+export type Book = {
+    title: string;
+    isbn: number;
 }
 
-export default Book;
+

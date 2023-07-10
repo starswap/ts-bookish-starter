@@ -1,4 +1,4 @@
-import Book from './book'
+import {Param} from './db_types'
 
 let Connection = require('tedious').Connection;
 let Request = require('tedious').Request;
@@ -33,32 +33,33 @@ connection.on('connect', function (err: Error) {
 
 connection.connect();
 
-export function getBooks(): Promise<Book[]> {
+export function runQuery<T>(query: string, cb: (columns: any[]) => T, params: Param[] = []): Promise<T[]> {
 
     return new Promise((resolve, reject) => {
 
-        const books: Book[] = [];
-        const request = new Request('select * from book', (err: Error, rowCount: number) => {
+        let rows: any[] = [];
+        const request = new Request(query, (err: Error, rowCount: number) => {
             if (err) {
                 throw err;
             }
-            console.log('DONE!');
         });
 
-        request.on('row', (columns: any[]) => {
-            const book: Book  = {
-                name: columns[0].value, 
-                ISBN: columns[1].value
-            };
-            books.push(book);
+        request.on('row', (columns: any[]) => {    
+            rows.push(cb(columns));
         });
 
         request.on('doneInProc', (rowCount: number) => {
-            console.log('Done is called!');
-            resolve(books);
+            resolve(rows);
+        });
+
+        request.on('done', (rowCount: number) => {
+            resolve(rows);
+        });
+
+        request.on('doneProc', (rowCount: number) => {
+            resolve(rows);
         });
 
         connection.execSql(request);
     })
 }
-
