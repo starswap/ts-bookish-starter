@@ -20,3 +20,13 @@ export type Borrow = {
     book: Book;
     return_date: Date;
 }
+
+export type BorrowWithUser = {
+    return_date: Date;
+    user: string;
+}
+
+export type Counts {
+    borrowed: number;
+    total: number;
+}
