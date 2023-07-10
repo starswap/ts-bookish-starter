@@ -28,7 +28,7 @@ const port = process.env['PORT'] || 3000;
 const app = express();
 app.use(express.urlencoded({ extended: true }));
 app.listen(port, () => {
-    return console.log(`Express is listening at http://localhost:${port}`);
+    return console.log(`Bookish Library API is listening at http://localhost:${port}`);
 });
 
 app.use('/healthcheck', healthcheckRoutes);
@@ -43,6 +43,7 @@ app.post('/login', async (req, res) => {
     if (!username || !password){
         res.status(400).send({success: false, message: "provide username and password fields"});
     } else {
+
         let privKey = fs.readFileSync("jwt-rs256.key");
         let token = sign({username : username}, privKey, {algorithm : 'RS256'});
         res.send({token : token});
