@@ -1,6 +1,9 @@
+import {TYPES} from 'tedious';
+
 export type Param = {
     name: string;
-    value: string;
+    value: any;
+    type: TYPES
 }
 
 export type Book = {

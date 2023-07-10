@@ -6,6 +6,7 @@ import { createHash } from 'node:crypto'
 import fs from 'fs';
 import {sign} from 'jsonwebtoken';
 import passport from 'passport';
+import {TYPES} from 'tedious';
 
 class UserController {
     router: Router;
@@ -26,7 +27,7 @@ class UserController {
                 username: columns[0].value,
                 password_hash: columns[1].value
             };
-        }, [{name: "username", value: username}]);
+        }, [{name: "username", type: TYPES.VarChar, value: username}]);
         
         assert(users.length <= 1);
         return (users.length == 1) && users[0].password_hash == this.sha256(password_guess);
@@ -62,7 +63,7 @@ class UserController {
                 },
                 return_date: columns[2].value
             };
-        }, [{name: "username", value: req.user}]);
+        }, [{name: "username", type: TYPES.VarChar, value: req.user}]);
 
         return res.status(200).send({"borrows":borrows});
     }

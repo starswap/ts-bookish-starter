@@ -1,5 +1,4 @@
 import {Param} from './db_types'
-import {TYPES} from 'tedious';
 
 let Connection = require('tedious').Connection;
 let Request = require('tedious').Request;
@@ -45,10 +44,10 @@ export function runQuery<T>(query: string, cb: (columns: any[]) => T, params: Pa
             }
         });
 
-        for (const {name: name, value: value} of params) {
-            request.addParameter(name, TYPES.VarChar, value);
+        for (const {name: name, type: type, value: value} of params) {
+            request.addParameter(name, type, value);
         }
-
+    
         request.on('row', (columns: any[]) => {    
             rows.push(cb(columns));
         });
