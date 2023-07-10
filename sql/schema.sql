@@ -41,7 +41,3 @@ CREATE TABLE borrow(
     CONSTRAINT borrow_copy_fk FOREIGN KEY (copy_id) REFERENCES book_copy(copy_id),
     CONSTRAINT borrow_user_fk FOREIGN KEY (username) REFERENCES bookish_user (username) 
 );
-
-
-
-
