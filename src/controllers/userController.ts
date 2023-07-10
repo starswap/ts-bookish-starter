@@ -38,7 +38,8 @@ class UserController {
         } else if (!(await this.checkLogin(username, password))) {
             res.status(403).send({success: false, message: "unauthorised"})
         } else {
-            let privKey = fs.readFileSync("jwt-rs256.key");
+            const private_key_location = process.env["PRIV_KEY"] || "jwt-rs256.key";
+            let privKey = fs.readFileSync(private_key_location);
             let token = sign({username : username}, privKey, {algorithm : 'RS256'});
             res.status(200).send({success: true, token : token});
         }

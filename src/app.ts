@@ -9,7 +9,8 @@ import passport from 'passport';
 
 // Setup the passport authentication with JSON web tokens
 function init_passport() {
-    let pubKey = fs.readFileSync("jwt-rs256.pub");
+    const public_key_location = process.env['PUB_KEY'] || "jwt-rs256.pub" ;
+    let pubKey = fs.readFileSync(public_key_location);
     const ops = {
         jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
         secretOrKey: pubKey,
