@@ -12,3 +12,8 @@ export type User = {
     username: string;
     password_hash: string;
 }
+
+export type Borrow = {
+    title: string;
+    return_date: Date;
+}

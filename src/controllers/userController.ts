@@ -1,10 +1,11 @@
 import { Router, Request, Response } from 'express';
 import { runQuery } from '../db';
 import { strict as assert } from 'node:assert';
-import { User } from '../db_types';
+import { User, Borrow } from '../db_types';
 import { createHash } from 'node:crypto'
 import fs from 'fs';
 import {sign} from 'jsonwebtoken';
+import passport from 'passport';
 
 class UserController {
     router: Router;
@@ -12,6 +13,7 @@ class UserController {
     constructor() {
         this.router = Router();
         this.router.post('/login', this.login.bind(this));
+        this.router.get('/borrows/list', passport.authenticate("jwt", {session : false}), this.listBorrows.bind(this));
     }
 
     private sha256(content) {  
@@ -30,7 +32,7 @@ class UserController {
         return (users.length == 1) && users[0].password_hash == this.sha256(password_guess);
     }
 
-    async login(req, res) {
+    async login(req: Request, res: Response) {
         const username = req.body["username"];
         const password = req.body["password"];
         if (!username || !password){
@@ -43,6 +45,23 @@ class UserController {
             let token = sign({username : username}, privKey, {algorithm : 'RS256'});
             res.status(200).send({success: true, token : token});
         }
+    }
+
+    async listBorrows(req, res: Response) {
+        const borrow_query = "SELECT book.title, borrow.return_date \
+        FROM borrow \
+        JOIN book_copy ON borrow.copy_id = book_copy.copy_id \
+        JOIN book ON book_copy.isbn = book.isbn \
+        WHERE borrow.username = @username";
+        
+        const borrows = await runQuery<Borrow>(borrow_query, (columns) => {
+            return {
+                title: columns[0].value,
+                return_date: columns[1].value
+            };
+        }, [{name: "username", value: req.user}]);
+
+        return res.status(200).send({"borrows":borrows});
     }
     
 }
