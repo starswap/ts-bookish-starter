@@ -48,7 +48,7 @@ class UserController {
     }
 
     async listBorrows(req, res: Response) {
-        const borrow_query = "SELECT book.title, borrow.return_date \
+        const borrow_query = "SELECT book.title, book.isbn, borrow.return_date \
         FROM borrow \
         JOIN book_copy ON borrow.copy_id = book_copy.copy_id \
         JOIN book ON book_copy.isbn = book.isbn \
@@ -56,8 +56,11 @@ class UserController {
         
         const borrows = await runQuery<Borrow>(borrow_query, (columns) => {
             return {
-                title: columns[0].value,
-                return_date: columns[1].value
+                book: {
+                    title: columns[0].value,
+                    isbn: columns[1].value
+                },
+                return_date: columns[2].value
             };
         }, [{name: "username", value: req.user}]);
 

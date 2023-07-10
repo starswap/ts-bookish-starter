@@ -14,6 +14,6 @@ export type User = {
 }
 
 export type Borrow = {
-    title: string;
+    book: Book;
     return_date: Date;
 }
