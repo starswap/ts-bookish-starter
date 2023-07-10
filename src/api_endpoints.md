@@ -1,7 +1,7 @@
 # API Plan
 
 ## /books
-- /add - Add new books by submitting the book's title, author(s), ISBN, and the number of copies owned by the library.
+- ✅ /add - Add new books by submitting the book's title, author(s), ISBN, and the number of copies owned by the library.
 - ✅ /search - Search books by title or author.
 - /catalogue - Show the library catalogue. This shows a paged view of every book in the catalogue, ordered alphabetically.
 - ✅ /get - View the number of copies for a book in total, and the number which are currently available. Where some books are unavailable, it shows which user borrowed them, and the date that they're due back.

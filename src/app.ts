@@ -31,6 +31,7 @@ const port = process.env['PORT'] || 3000;
 const app = express();
 
 app.use(express.urlencoded({ extended: true }));
+app.use(express.json())
 app.use('/healthcheck', healthcheckRoutes);
 app.use('/books', bookRoutes);
 app.use('/user', userRoutes);

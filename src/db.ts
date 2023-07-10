@@ -40,7 +40,7 @@ export function runQuery<T>(query: string, cb: (columns: any[]) => T, params: Pa
         let rows: any[] = [];
         const request = new Request(query, (err: Error, rowCount: number) => {
             if (err) {
-                throw err;
+                reject(err);
             }
         });
 

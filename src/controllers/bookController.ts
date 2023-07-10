@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { runQuery } from '../db';
 import { Book, Counts, BorrowWithUser, Borrow } from '../db_types';
 import passport from 'passport';
-import {TYPES} from 'tedious';
+import { TYPES, RequestError } from 'tedious';
 import { strict as assert } from 'node:assert';
 
 class BookController {
@@ -13,6 +13,7 @@ class BookController {
         this.router.get('/all', passport.authenticate("jwt", {session : false}), this.getAllBooks.bind(this));
         this.router.get('/search', passport.authenticate("jwt", {session : false}), this.searchBooks.bind(this));
         this.router.get('/get', this.getBook.bind(this));
+        this.router.post('/add', this.createBook.bind(this));
     }
 
     private async getBooksFromDB(): Promise<Book[]> {
@@ -24,7 +25,7 @@ class BookController {
         });
         return books;
     }
-    
+
     private async getBorrowCounts(isbn: number) {
         const query = "SELECT COUNT(username) AS borrowed, \
                         COUNT(COALESCE(username, '_')) AS total \
@@ -56,12 +57,61 @@ class BookController {
 
     }
 
-    createBook(req: Request, res: Response) {
-        // TODO: implement functionality
-        return res.status(500).json({
-            error: 'server_error',
-            error_description: 'Endpoint not implemented yet.',
-        });
+    async createBook(req: Request, res: Response) {
+        if (!req.body.isbn || !req.body.title || !req.body.authors || Number.isNaN(parseInt(req.body.isbn) || !req.body.authors.all((x) => typeof(x) == 'number'))) {
+            return res.status(400).send({success: false, message: "Invalid Request"})
+        } else {
+            let allAuthorsExist = true;
+            const query = `SELECT COUNT(author_name) FROM author WHERE author_id IN (${req.body.authors.map((x) => x.toString()).join(',')})`;
+            await runQuery(query, 
+                (columns) => {
+                    allAuthorsExist = (columns[0].value == req.body.authors.length);
+                }
+            );
+            
+            if (!allAuthorsExist) {
+                return res.status(400).send({success: false, message: "All authors must be numeric author ids which are present in the DB"})
+            } else {
+                const isbn_num = parseInt(req.body.isbn);
+
+                try {
+                    // Create the new book
+                    await runQuery("INSERT INTO book(title, isbn) VALUES (@title, @isbn)", 
+                                    () => {},
+                                    [{name: "title", type: TYPES.VarChar, value: req.body.title},
+                                    {name: "isbn", type: TYPES.BigInt, value: isbn_num}]);
+                } catch (e) {
+                    if (e instanceof RequestError) {
+                        return res.status(409).send({success: false, message: "Failed to re-create book which already exists."});
+                    } else {
+                        throw(e);
+                    }
+                } 
+                // Add the authors who wrote it:
+                let query = "INSERT INTO wrote(isbn, author_id) VALUES ";
+                let params = [{name: "isbn", type: TYPES.BigInt, value: isbn_num }]
+                for (let i = 0; i < req.body.authors.length; ++i) {
+                    query = query.concat(`(@isbn,@author${i}),`);
+                    params.push({name: `author${i}`, type: TYPES.BigInt, value: req.body.authors[i] });
+                }
+                query = query.substring(0, query.length - 1); // remove trailing comma
+                await runQuery(query, () => {}, params);
+    
+                // Add copies
+                query = "INSERT INTO book_copy(isbn) VALUES ";
+                for (let i = 0; i < req.body.number_of_copies; ++i) {
+                    query = query.concat("(@isbn),");
+                }
+                query = query.substring(0, query.length - 1); // remove trailing comma
+
+                await runQuery(query, () => {}, [{name: "isbn", type: TYPES.BigInt, value: isbn_num}]);
+    
+                return res.status(200).json({
+                    success: true,
+                    message: "New book(s) added."
+                });    
+            }
+        }
     }
 
     async getAllBooks(req: Request, res: Response) {
