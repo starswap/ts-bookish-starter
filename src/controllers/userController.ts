@@ -47,7 +47,7 @@ class UserController {
         }
     }
 
-    async listBorrows(req, res: Response) {
+    async listBorrows(req: passport.Request, res: Response) {
         const borrow_query = "SELECT book.title, book.isbn, borrow.return_date \
         FROM borrow \
         JOIN book_copy ON borrow.copy_id = book_copy.copy_id \
