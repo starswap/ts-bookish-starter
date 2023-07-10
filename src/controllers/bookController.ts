@@ -24,6 +24,37 @@ class BookController {
         });
         return books;
     }
+    
+    private async getBorrowCounts(isbn: number) {
+        const query = "SELECT COUNT(username) AS borrowed, \
+                        COUNT(COALESCE(username, '_')) AS total \
+                        FROM borrow RIGHT JOIN book_copy ON borrow.copy_id = book_copy.copy_id \
+                        WHERE book_copy.isbn = @isbn";
+        
+        const counts = await runQuery<Counts>(query, (columns) => {
+            return {
+                borrowed: columns[0].value,
+                total: columns[1].value
+            };
+        }, [{name: "isbn", type: TYPES.BigInt, value: isbn}]);
+
+        assert(counts.length == 1); // should only receive one row of counts
+        
+        return counts[0];
+    }
+
+    private async getCurrentBorrows(isbn: number) {
+        const query = "SELECT borrow.return_date, borrow.username \
+        FROM borrow JOIN book_copy ON borrow.copy_id = book_copy.copy_id\
+        WHERE book_copy.isbn = @isbn";
+        return await runQuery<BorrowWithUser>(query, (columns) => {
+                return {
+                    user: columns[1].value,
+                    return_date: columns[0].value
+                };
+            }, [{name: "isbn", type: TYPES.BigInt, value: isbn}]);
+
+    }
 
     createBook(req: Request, res: Response) {
         // TODO: implement functionality
@@ -59,49 +90,23 @@ class BookController {
             "books": books
         });
     };
-    
+
     async getBook(req, res: Response) {
         const isbn = req.query["isbn"];
-        if (!isbn) {
+        if (!isbn || Number.isNaN(parseInt(isbn))) {
             return res.status(400).send({"success":false, "message":"Bad Request"});
         } else {
-            const query = "SELECT COUNT(username) AS borrowed, \
-                           COUNT(COALESCE(username, '_')) AS total \
-                           FROM borrow RIGHT JOIN book_copy ON borrow.copy_id = book_copy.copy_id \
-                           WHERE book_copy.isbn = @isbn";
-            
-            const counts = await runQuery<Counts>(query, (columns) => {
-                return {
-                    borrowed: columns[0].value,
-                    total: columns[1].value
-                };
-            }, [{name: "isbn", type: TYPES.BigInt, value: parseInt(isbn)}]);
+            const isbn_num = parseInt(isbn);
 
-            console.log(counts)
-            assert(counts.length == 1);
-            
-            const total_copies = counts[0].total;
-            const borrowed_copies = counts[0].borrowed;
-            const avail_copies = counts[0].total - counts[0].borrowed;
+            const borrow_counts = await this.getBorrowCounts(isbn_num);
+            const total_copies = borrow_counts.total;
+            const borrowed_copies = borrow_counts.borrowed;
+            const avail_copies = borrow_counts.total - borrow_counts.borrowed;
 
-
-            let borrows: BorrowWithUser[] = [];
-            if (borrowed_copies > 0) {
-                const query = "SELECT borrow.return_date, borrow.username \
-                               FROM borrow JOIN book_copy ON borrow.copy_id = book_copy.copy_id\
-                               WHERE book_copy.isbn = @isbn";
-                borrows = await runQuery<BorrowWithUser>(query, (columns) => {
-                    return {
-                        user: columns[1].value,
-                        return_date: columns[0].value
-                    };
-                }, [{name: "isbn", type: TYPES.BigInt, value: parseInt(isbn)}]);
-            }
-            
             return res.status(200).json({
                 total_copies: total_copies,
                 avail_copies: avail_copies,
-                borrows: borrows
+                borrows: (borrowed_copies > 0) ? await this.getCurrentBorrows(isbn_num) : []
             });
         }
     }
