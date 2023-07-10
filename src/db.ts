@@ -52,17 +52,9 @@ export function runQuery<T>(query: string, cb: (columns: any[]) => T, params: Pa
             rows.push(cb(columns));
         });
 
-        request.on('doneInProc', (rowCount: number) => {
-            resolve(rows);
-        });
-
-        request.on('done', (rowCount: number) => {
-            resolve(rows);
-        });
-
-        request.on('doneProc', (rowCount: number) => {
-            resolve(rows);
-        });
+        request.on('requestCompleted', () => {
+            resolve(rows)
+        })
 
         connection.execSql(request);
     })
